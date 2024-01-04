@@ -50,6 +50,7 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 		}
 	}
 	runtime.KeepAlive(f)
+	runtime.KeepAlive(bi)
 	return nil
 }
 
