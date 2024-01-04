@@ -4,10 +4,8 @@
 package winio
 
 import (
-	"fmt"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -43,8 +41,6 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 		(*byte)(unsafe.Pointer(bi)),
 		uint32(unsafe.Sizeof(*bi)),
 	); err != nil {
-		debug.PrintStack()
-		fmt.Fprintf(os.Stderr, "SetFileInformationByHandle failed: %#v\t%#v\t%#v\n", f, bi, err)
 		return &os.PathError{Op: "SetFileInformationByHandle", Path: f.Name(), Err: err}
 	}
 	runtime.KeepAlive(f)
