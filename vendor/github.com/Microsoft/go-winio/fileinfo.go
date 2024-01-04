@@ -46,7 +46,7 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 		return &os.PathError{
 			Op:   "SetFileInformationByHandle",
 			Path: f.Name(),
-			Err:  fmt.Errorf("%v\n%#v\n%#v\n\n%w", string(debug.Stack()), f, bi, err),
+			Err:  fmt.Errorf("%v\n%#v\n%w", string(debug.Stack()), f, err),
 		}
 	}
 	runtime.KeepAlive(f)
