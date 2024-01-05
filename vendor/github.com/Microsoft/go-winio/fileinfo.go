@@ -37,6 +37,7 @@ func GetFileBasicInfo(f *os.File) (*FileBasicInfo, error) {
 
 // SetFileBasicInfo sets times and attributes for a file.
 func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
+	s := fmt.Sprintf("%#v", bi)
 	if err := windows.SetFileInformationByHandle(
 		windows.Handle(f.Fd()),
 		windows.FileBasicInfo,
@@ -46,11 +47,10 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 		return &os.PathError{
 			Op:   "SetFileInformationByHandle",
 			Path: f.Name(),
-			Err:  fmt.Errorf("%v\n%#v\n%w", string(debug.Stack()), f, err),
+			Err:  fmt.Errorf("%v\n%v\n%#v\n%w", string(debug.Stack()), f, s, err),
 		}
 	}
 	runtime.KeepAlive(f)
-	runtime.KeepAlive(bi)
 	return nil
 }
 
