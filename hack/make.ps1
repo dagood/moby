@@ -187,6 +187,9 @@ Function Execute-Build($type, $additionalBuildTags, $directory, $ldflags) {
     # https://github.com/golang/go/issues/14319#issuecomment-189576638
     Write-Host "INFO: Building $type..."
     Push-Location $root\cmd\$directory; $global:pushed=$True
+
+    & go env | Write-Host
+
     $buildCommand = "go build" + `
                     $raceParm + `
                     $verboseParm + `
