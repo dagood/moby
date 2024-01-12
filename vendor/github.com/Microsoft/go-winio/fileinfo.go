@@ -18,9 +18,31 @@ type FileBasicInfo struct {
 	_                                                       uint32 // padding
 }
 
+// alignedFileBasicInfo is a FileBasicInfo, but aligned to uint64 by containing
+// uint64 rather than windows.Filetime. Filetime contains two uint32s. uint64
+// alignment is necessary to pass this as FILE_BASIC_INFORMATION.
+type alignedFileBasicInfo struct {
+	CreationTime, LastAccessTime, LastWriteTime, ChangeTime uint64
+	FileAttributes                                          uint32
+	_                                                       uint32 // padding
+}
+
+// alignFileBasicInfo creates a alignedFileBasicInfo based on a
+// FileBasicInfo. The copy is suitable to pass to GetFileInformationByHandleEx.
+func alignFileBasicInfo(bi FileBasicInfo) alignedFileBasicInfo {
+	return *(*alignedFileBasicInfo)(unsafe.Pointer(&bi))
+}
+
+// unalignFileBasicInfo reinterprets a alignedFileBasicInfo as a FileBasicInfo.
+// The returned pointer's type will be unnecessarily aligned, but matches the
+// public API of this module.
+func unalignFileBasicInfo(bi *alignedFileBasicInfo) *FileBasicInfo {
+	return (*FileBasicInfo)(unsafe.Pointer(bi))
+}
+
 // GetFileBasicInfo retrieves times and attributes for a file.
 func GetFileBasicInfo(f *os.File) (*FileBasicInfo, error) {
-	bi := &FileBasicInfo{}
+	bi := &alignedFileBasicInfo{}
 	if err := windows.GetFileInformationByHandleEx(
 		windows.Handle(f.Fd()),
 		windows.FileBasicInfo,
@@ -30,24 +52,12 @@ func GetFileBasicInfo(f *os.File) (*FileBasicInfo, error) {
 		return nil, &os.PathError{Op: "GetFileInformationByHandleEx", Path: f.Name(), Err: err}
 	}
 	runtime.KeepAlive(f)
-	return bi, nil
+	return unalignFileBasicInfo(bi), nil
 }
 
 // SetFileBasicInfo sets times and attributes for a file.
 func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
-	merge := func(t windows.Filetime) uint64 {
-		return uint64(t.HighDateTime)<<32 | uint64(t.LowDateTime)
-	}
-	biAligned := struct {
-		CreationTime, LastAccessTime, LastWriteTime, ChangeTime uint64
-		FileAttributes                                          uint32
-		_                                                       uint32 // padding
-	}{
-		merge(bi.CreationTime), merge(bi.LastAccessTime), merge(bi.LastWriteTime), merge(bi.ChangeTime),
-		bi.FileAttributes,
-		0,
-	}
-
+	biAligned := alignFileBasicInfo(*bi)
 	if err := windows.SetFileInformationByHandle(
 		windows.Handle(f.Fd()),
 		windows.FileBasicInfo,
