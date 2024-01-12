@@ -38,7 +38,7 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 	merge := func(t windows.Filetime) uint64 {
 		return uint64(t.HighDateTime)<<32 | uint64(t.LowDateTime)
 	}
-	biAligned := &struct {
+	biAligned := struct {
 		CreationTime, LastAccessTime, LastWriteTime, ChangeTime uint64
 		FileAttributes                                          uint32
 		_                                                       uint32 // padding
@@ -51,8 +51,8 @@ func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
 	if err := windows.SetFileInformationByHandle(
 		windows.Handle(f.Fd()),
 		windows.FileBasicInfo,
-		(*byte)(unsafe.Pointer(biAligned)),
-		uint32(unsafe.Sizeof(*biAligned)),
+		(*byte)(unsafe.Pointer(&biAligned)),
+		uint32(unsafe.Sizeof(biAligned)),
 	); err != nil {
 		return &os.PathError{Op: "SetFileInformationByHandle", Path: f.Name(), Err: err}
 	}
