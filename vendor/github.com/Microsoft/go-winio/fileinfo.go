@@ -35,11 +35,24 @@ func GetFileBasicInfo(f *os.File) (*FileBasicInfo, error) {
 
 // SetFileBasicInfo sets times and attributes for a file.
 func SetFileBasicInfo(f *os.File, bi *FileBasicInfo) error {
+	merge := func(t windows.Filetime) uint64 {
+		return uint64(t.HighDateTime)<<32 | uint64(t.LowDateTime)
+	}
+	biAligned := &struct {
+		CreationTime, LastAccessTime, LastWriteTime, ChangeTime uint64
+		FileAttributes                                          uint32
+		_                                                       uint32 // padding
+	}{
+		merge(bi.CreationTime), merge(bi.LastAccessTime), merge(bi.LastWriteTime), merge(bi.ChangeTime),
+		bi.FileAttributes,
+		0,
+	}
+
 	if err := windows.SetFileInformationByHandle(
 		windows.Handle(f.Fd()),
 		windows.FileBasicInfo,
-		(*byte)(unsafe.Pointer(bi)),
-		uint32(unsafe.Sizeof(*bi)),
+		(*byte)(unsafe.Pointer(biAligned)),
+		uint32(unsafe.Sizeof(*biAligned)),
 	); err != nil {
 		return &os.PathError{Op: "SetFileInformationByHandle", Path: f.Name(), Err: err}
 	}
